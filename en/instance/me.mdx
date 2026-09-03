@@ -105,6 +105,10 @@ This method returns your instance data and settings.
   Defines whether the instance is using the configured proxy.
 </ResponseField>
 
+<ResponseField name="announcementGuard" type="boolean">
+  Defines whether the instance with the anti-fraud protection feature in warning groups is active.
+</ResponseField>
+
 ```json
 {
   "id": "123456",
@@ -126,7 +130,8 @@ This method returns your instance data and settings.
   "autoReadMessage": false,
   "initialDataCallbackUrl": "",
   "proxyUrl": "socks5://user:senha123@localhost:1080",
-  "useProxy": true
+  "useProxy": true,
+  "announcementGuard": true
 }
 ```
 

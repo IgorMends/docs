@@ -1,0 +1,171 @@
+---
+title: "Anti-Scam Protection in Announcement Groups"
+description: "Anti-scam protection in announcement groups automatically deletes, for everyone, messages sent by scammers (participants who are not admins) in your community announcement groups — groups where only admins can send messages. When the protection deletes a message, you receive an alert on your webhook with the sender's data, so you can decide what to do with the sender (for example, removing them from the group)."
+---
+
+- Configurable per instance and comes disabled by default.
+
+- For it to work, the instance needs to be an admin of the group.
+
+## 1. Enable / disable via API (new endpoint)
+
+```
+PUT https://api.z-api.io/instances/{instanceId}/token/{token}/update-announcement-guard
+```
+### Headers
+
+| Header | Value |
+| :--- | :--- |
+| `Client-Token` | Account security token |
+| `Content-Type` | `application/json` |
+
+<ParamField body="value" type="boolean" required>
+  Value that toggles the protection, TRUE enables and FALSE disables (Default = FALSE)
+</ParamField>
+
+### Request Body
+
+```json
+{
+    "value": true
+}
+```
+
+## Response
+
+### 200
+<ParamField body="value" type="boolean">
+  Returned with the status provided in the request (TRUE or FALSE)
+</ParamField>
+
+## 2. Check the current state (existing /me endpoint)
+
+After configuring the Anti-Scam Protection, you can check the current state of the feature directly via the API. This lookup lets you verify the settings applied to the instance and confirm whether the protection is properly enabled.
+
+```
+GET https://api.z-api.io/instances/{instanceId}/token/{token}/me
+```
+
+
+The response now includes the new field:
+```json
+{
+  "announcementGuard": true
+}
+```
+
+The field returns TRUE when the feature is active and FALSE when it is disabled.
+
+## 3. Enable via dashboard
+
+In the instance dashboard, under the "Announcement group security" section, the "Anti-scam protection in announcement groups" option is available.
+
+Turning this switch on or off has the same effect as using the endpoint described above, letting you manage the feature directly from the dashboard. After making the change, just use the screen's standard save button to apply the new setting.
+
+## 4. What you receive when the protection acts (webhook)
+
+When the Anti-Scam Protection removes a message identified as a scam attempt, an event is sent as usual through the receiving webhook (**ReceivedCallback**), using the existing "message revoked/deleted" event.
+
+To identify that the message was removed specifically by the protection, just check the **notificationParameters** field present in the webhook payload.
+
+How to identify it:
+
+- notificationParameters: **["ANNOUNCEMENT_GUARD"]** → the scammer's message was successfully deleted by the protection.
+
+- notificationParameters: **["ANNOUNCEMENT_GUARD_FAILED", "[REASON]"]** → the protection attempted to delete it but failed (the message may still be visible). Possible reasons:
+
+| Reason | Meaning |
+| :--- | :--- |
+| `TIMEOUT_EXCEEDED` | Time ran out while trying to delete the message. |
+| `MISSING_GROUP_PERMISSION` | The instance is not an admin of the group or lacks permission to delete messages. |
+| `GROUP_SUSPENDED` | The group is suspended. |
+| `SOMETHING_WENT_WRONG` | A generic failure occurred during the removal attempt. |
+
+## Webhook return
+
+### Return attributes
+
+All returns from this webhook have the following attributes:
+
+<ParamField body="notification" type="string">
+  Indicates the type of notification received. For deleted messages, the value will be `"REVOKE"`.
+</ParamField>
+
+<ParamField body="notificationParameters" type="string">
+  Identifies that the message removal was performed by the Anti-Scam Protection.
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Identifies the group where the message removal occurred.
+</ParamField>
+
+<ParamField body="chatName" type="string">
+  Name of the group where the removal occurred.
+</ParamField>
+
+<ParamField body="messageId" type="string">
+  Identifier of the message that was deleted.
+</ParamField>
+
+<ParamField body="participantPhone" type="string">
+  Phone number of the author of the removed message.
+</ParamField>
+
+<ParamField body="participantLid" type="string">
+  LID identifier of the message's author.
+</ParamField>
+
+<ParamField body="senderName" type="string">
+  Name of the message's author, when available.
+</ParamField>
+
+<ParamField body="fromMe" type="boolean">
+  Indicates whether the message belonged to the instance itself. In this case, the value will be <code>false</code>.
+</ParamField>
+
+<ParamField body="fromApi" type="boolean">
+  Indicates that the action was performed by the platform. In this case, the value will be <code>true</code>.
+</ParamField>
+
+Example payload:
+
+```json
+{
+  "isGroup": true,
+  "instanceId": "YOUR_INSTANCE_ID",
+  "messageId": "3EB0...",
+  "phone": "120363XXXXXXXXXXX-group",
+  "connectedPhone": "5544XXXXXXXXX",
+  "fromMe": false,
+  "fromApi": true,
+  "momment": 199999999,
+  "status": "RECEIVED",
+  "chatName": "Announcement Group Name",
+  "senderName": "Author's Name",
+  "participantPhone": "5544XXXXXXXXX",
+  "participantLid": "XXXXXXXXXXXXXXX@lid",
+  "type": "ReceivedCallback",
+  "notification": "REVOKE",
+  "notificationParameters": ["ANNOUNCEMENT_GUARD"]
+}
+```
+
+## 5. What to do with the event
+
+Using the participantPhone (or participantLid) received in the event, you can call the group participant removal endpoint, already available in the API, to remove the message's author.
+
+The Anti-Scam Protection does not remove the participant automatically. The decision to remove the author or not is up to you, allowing you to define your application's behavior according to your needs.
+
+## 6. Notes
+
+- The protection only acts while the instance is connected and has admin privileges in the group.
+
+- The feature applies exclusively to community announcement groups, where only admins can send messages. It does not act in regular groups or individual chats.
+
+- Messages sent by admins are not affected by the protection.
+
+- Each message is processed individually. Therefore, each revocation generates its own webhook event. If the same author sends multiple messages, each message will be revoked and will generate a new event.
+
+- The message's author is not automatically removed from the group. As long as they remain in the group, they can send new messages. Each new attempt identified by the protection will be handled individually, generating a new revocation and a new webhook event.
+
+---

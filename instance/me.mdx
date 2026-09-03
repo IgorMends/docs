@@ -105,6 +105,10 @@ Este método retorna os dados e configurações da sua instância.
   Define se a instância está utilizando o proxy configurado
 </ResponseField>
 
+<ResponseField name="announcementGuard" type="boolean">
+  Define se a instância com o recurso de proteção anti-golpe em grupos de avisos ativa.
+</ResponseField>
+
 ```json
 {
   "id": "123456",
@@ -126,7 +130,8 @@ Este método retorna os dados e configurações da sua instância.
   "autoReadMessage": false,
   "initialDataCallbackUrl": "",
   "proxyUrl": "socks5://user:senha123@localhost:1080",
-  "useProxy": true
+  "useProxy": true,
+  "announcementGuard": true
 }
 ```
 

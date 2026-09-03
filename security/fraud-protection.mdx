@@ -1,0 +1,169 @@
+---
+title: "Proteção Anti-Golpe em Grupos de Avisos"
+description: "A Proteção anti-golpe em grupos de avisos apaga automaticamente, para todos, as mensagens enviadas por golpistas (participantes que não são administradores) nos seus grupos de avisos de comunidade — aqueles em que só administradores podem enviar mensagens. Quando a proteção apaga uma mensagem, você recebe um aviso no seu webhook com os dados de quem enviou, para decidir o que fazer com o autor (por exemplo, removê-lo do grupo)."
+---
+
+- É configurável por instância e vem desligada por padrão.
+
+- Para funcionar, a instância precisa ser administradora do grupo.
+
+## 1. Habilitar / desabilitar via API (novo endpoint)
+
+```
+PUT https://api.z-api.io/instances/{instanceId}/token/{token}/update-announcement-guard
+```
+### Headers
+
+| Header | Valor |
+| :--- | :--- |
+| `Client-Token` | Token de segurança da conta |
+| `Content-Type` | `application/json` |
+
+<ParamField body="value" type="boolean" required>
+  Valor que liga a proteção, TRUE ativa e FALSE desativa (Padrão = FALSE)
+</ParamField>
+
+### Request Body
+
+```json
+{
+    "value": true
+}
+```
+
+ ## Response
+
+ ### 200
+ <ParamField body="value" type="boolean">
+  É retornado com o status informado na requisição (TRUE or FALSE)
+</ParamField>
+
+##  2. Consultar o estado atual (endpoint existente /me)
+
+Após realizar a configuração da Proteção Anti-Golpe, você pode consultar o estado atual da funcionalidade diretamente pela API. Essa consulta permite verificar as configurações aplicadas à instância e identificar se a proteção está devidamente habilitada.
+
+```
+GET https://api.z-api.io/instances/{instanceId}/token/{token}/me
+```
+
+A resposta agora inclui o campo novo:
+```json
+{
+  "announcementGuard": true
+}
+```
+
+O campo retorna TRUE quando o recurso está ativo e FALSE quando a funcionalidade está desabilitada.
+
+## 3. Habilitar via painel 
+
+No painel da instância, na seção “Segurança nos grupos de avisos”, está disponível a opção “Proteção anti-golpe em grupos de avisos”.
+
+A ativação ou desativação dessa chave possui o mesmo efeito da utilização do endpoint descrito nesta documentação anteriormente, permitindo gerenciar o recurso diretamente pelo painel. Após realizar a alteração, basta utilizar o botão padrão de salvar da tela para aplicar a nova configuração.
+
+## 4. O que você recebe quando a proteção age (webhook)
+
+Quando a Proteção Anti-Golpe remove uma mensagem identificada como tentativa de golpe, um evento é enviado normalmente pelo webhook de recebimento (**ReceivedCallback**), utilizando o evento já existente de “mensagem revogada/apagada”.
+
+Para identificar que a mensagem foi removida especificamente pela proteção, basta verificar o campo **NotificationParameters** presente no payload do webhook.
+
+Como identificar:
+
+- notificationParameters: **["ANNOUNCEMENT_GUARD"]** → a mensagem do golpista foi apagada com sucesso pela proteção.
+
+- notificationParameters: **["ANNOUNCEMENT_GUARD_FAILED", "[MOTIVO]"]** → a proteção tentou apagar, mas falhou (a mensagem pode continuar visível). Possíveis motivos:
+
+| Motivo | Significado |
+| :--- | :--- |
+| `TIMEOUT_EXCEEDED` | Tempo esgotado ao tentar apagar a mensagem. |
+| `MISSING_GROUP_PERMISSION` | A instância não é administradora do grupo ou não possui permissão para apagar mensagens. |
+| `GROUP_SUSPENDED` | O grupo está suspenso. |
+| `SOMETHING_WENT_WRONG` | Ocorreu uma falha genérica durante a tentativa de remoção. |
+
+## Retorno do webhook
+​
+Atributos do retorno
+Todos os retornos deste webhook possuem os seguintes atributos:
+
+<ParamField body="notification" type="string">
+  Indica o tipo de notificação recebida. Para mensagens apagadas, o valor será `"REVOKE"`.
+</ParamField>
+
+<ParamField body="notificationParameters" type="string">
+  Identifica que a remoção da mensagem foi realizada pela Proteção Anti-Golpe.
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Identifica o grupo onde ocorreu a remoção da mensagem.
+</ParamField>
+
+<ParamField body="chatName" type="string">
+  Nome do grupo onde ocorreu a remoção.
+</ParamField>
+
+<ParamField body="messageId" type="string">
+  Identificador da mensagem que foi apagada.
+</ParamField>
+
+<ParamField body="participantPhone" type="string">
+  Número de telefone do autor da mensagem removida.
+</ParamField>
+
+<ParamField body="participantLid" type="string">
+  Identificador LID do autor da mensagem.
+</ParamField>
+
+<ParamField body="senderName" type="string">
+  Nome do autor da mensagem, quando disponível.
+</ParamField>
+
+<ParamField body="fromMe" type="boolean">
+  Indica se a mensagem pertencia à própria instância. Neste caso, o valor será <code>false</code>.
+</ParamField>
+
+<ParamField body="fromApi" type="boolean">
+  Indica que a ação foi realizada pela plataforma. Neste caso, o valor será <code>true</code>.
+</ParamField>
+
+Exemplo de payload:
+
+```json
+{
+  "isGroup": true,
+  "instanceId": "SEU_INSTANCE_ID",
+  "messageId": "3EB0...",
+  "phone": "120363XXXXXXXXXXX-group",
+  "connectedPhone": "5544XXXXXXXXX",
+  "fromMe": false,
+  "fromApi": true,
+  "momment": 199999999,
+  "status": "RECEIVED",
+  "chatName": "Nome do Grupo de Avisos",
+  "senderName": "Nome do Autor",
+  "participantPhone": "5544XXXXXXXXX",
+  "participantLid": "XXXXXXXXXXXXXXX@lid",
+  "type": "ReceivedCallback",
+  "notification": "REVOKE",
+  "notificationParameters": ["ANNOUNCEMENT_GUARD"]
+}
+```
+
+## 5. O que fazer com o evento
+
+Com o participantPhone (ou participantLid) recebido no evento, você pode utilizar o endpoint de remoção de participante do grupo, já disponível na API, para remover o autor da mensagem.
+
+A Proteção Anti-Golpe não remove o participante automaticamente. A decisão de remover ou não o autor fica sob seu controle, permitindo que você defina o comportamento da sua aplicação de acordo com a sua necessidade.
+
+## 6. Observações
+
+- A proteção atua somente quando a instância está conectada e possui privilégios de administradora no grupo.
+
+- O recurso é aplicável exclusivamente a grupos de avisos de comunidades, nos quais apenas administradores podem enviar mensagens. Ele não atua em grupos comuns nem em conversas individuais.
+
+- Mensagens enviadas por administradores não são afetadas pela proteção.
+
+- Cada mensagem é processada individualmente. Portanto, cada revogação gera um evento próprio no webhook. Caso o mesmo autor envie várias mensagens, cada mensagem será revogada e gerará um novo evento.
+
+- O autor da mensagem não é removido automaticamente do grupo. Enquanto permanecer no grupo, ele poderá enviar novas mensagens. Cada nova tentativa identificada pela proteção será tratada individualmente, gerando uma nova revogação e um novo evento no webhook.
+
+---
