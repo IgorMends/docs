@@ -9,34 +9,11 @@ description: "A Proteção anti-golpe em grupos de avisos apaga automaticamente,
 
 ## 1. Habilitar / desabilitar via API (novo endpoint)
 
-```
-PUT https://api.z-api.io/instances/{instanceId}/token/{token}/update-announcement-guard
-```
-### Headers
+Na Proteção Anti-Golpe em Grupos de Avisos, a habilitação ou desabilitação do recurso também pode ser realizada via API, utilizando o endpoint específico disponibilizado para essa configuração.
 
-| Header | Valor |
-| :--- | :--- |
-| `Client-Token` | Token de segurança da conta |
-| `Content-Type` | `application/json` |
+Para mais detalhes sobre a utilização do endpoint, consulte a documentação abaixo.
 
-<ParamField body="value" type="boolean" required>
-  Valor que liga a proteção, TRUE ativa e FALSE desativa (Padrão = FALSE)
-</ParamField>
-
-### Request Body
-
-```json
-{
-    "value": true
-}
-```
-
- ## Response
-
- ### 200
- <ParamField body="value" type="boolean">
-  É retornado com o status informado na requisição (TRUE or FALSE)
-</ParamField>
+🔗 https://developer.z-api.io/instance/update-announcement-guard
 
 ##  2. Consultar o estado atual (endpoint existente /me)
 

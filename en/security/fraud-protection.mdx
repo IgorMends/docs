@@ -9,34 +9,11 @@ description: "Anti-scam protection in announcement groups automatically deletes,
 
 ## 1. Enable / disable via API (new endpoint)
 
-```
-PUT https://api.z-api.io/instances/{instanceId}/token/{token}/update-announcement-guard
-```
-### Headers
+In Anti-Scam Protection for Announcement Groups, the feature can also be enabled or disabled via API using the dedicated configuration endpoint.
 
-| Header | Value |
-| :--- | :--- |
-| `Client-Token` | Account security token |
-| `Content-Type` | `application/json` |
+For more details on how to use the endpoint, refer to the documentation below.
 
-<ParamField body="value" type="boolean" required>
-  Value that toggles the protection, TRUE enables and FALSE disables (Default = FALSE)
-</ParamField>
-
-### Request Body
-
-```json
-{
-    "value": true
-}
-```
-
-## Response
-
-### 200
-<ParamField body="value" type="boolean">
-  Returned with the status provided in the request (TRUE or FALSE)
-</ParamField>
+🔗 https://developer.z-api.io/instance/update-announcement-guard
 
 ## 2. Check the current state (existing /me endpoint)
 

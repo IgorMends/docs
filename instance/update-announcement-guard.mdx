@@ -1,0 +1,51 @@
+---
+title: "Ativar Proteção de Grupo de Avisos"
+api: "PUT /instances/{instanceId}/token/{token}/update-announcement-guard"
+description: "Proteja seus grupos de avisos contra mensagens de golpe, removendo automaticamente conteúdos enviados por participantes que não são administradores e recebendo os dados do autor via webhook."
+---
+import InstanceId from '/snippets/pt/params/instance-id.mdx'
+import Token from '/snippets/pt/params/token.mdx'
+
+<Warning>
+Observações sobre este endpoint
+
+- Funciona apenas em grupos de avisos onde a instância é administradora.
+- Ignora administradores.
+- Cada mensagem gera um evento no webhook.
+- O autor não é removido automaticamente.
+</Warning>
+
+## Conceituação
+
+A Proteção Anti-Golpe em Grupos de Avisos remove automaticamente, para todos os participantes, as mensagens enviadas por golpistas — ou seja, participantes que não são administradores — em grupos de avisos de comunidades, nos quais apenas administradores podem enviar mensagens. Sempre que uma mensagem é removida, você recebe um evento no webhook contendo os dados do autor. Assim, sua aplicação pode identificar o responsável e tomar as medidas necessárias, como removê-lo do grupo.
+
+## Atributos
+
+<InstanceId />
+<Token />
+
+### Headers
+
+| Header | Valor |
+| :--- | :--- |
+| `Client-Token` | Token de segurança da conta |
+| `Content-Type` | `application/json` |
+
+### Request Body
+
+```json
+{
+    "value": true
+}
+```
+
+<ParamField body="value" type="boolean" required>
+  Valor que liga a proteção, TRUE ativa e FALSE desativa (Padrão = FALSE)
+</ParamField>
+
+ ## Response
+
+ ### 200
+ <ParamField body="value" type="boolean">
+  É retornado com o status informado na requisição (TRUE or FALSE)
+</ParamField>
