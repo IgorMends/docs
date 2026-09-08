@@ -1,0 +1,51 @@
+---
+title: "Enable Announcement Group Protection"
+api: "PUT /instances/{instanceId}/token/{token}/update-announcement-guard"
+description: "Protect your announcement groups from scam messages by automatically removing content sent by participants who are not admins, and receiving the sender's data via webhook."
+---
+import InstanceId from '/snippets/en/params/instance-id.mdx'
+import Token from '/snippets/en/params/token.mdx'
+
+<Warning>
+Notes about this endpoint
+
+- Only works in announcement groups where the instance is an admin.
+- Ignores admins.
+- Each message generates a webhook event.
+- The author is not removed automatically.
+</Warning>
+
+## Overview
+
+The Anti-Scam Protection in Announcement Groups automatically removes, for all participants, messages sent by scammers — that is, participants who are not admins — in community announcement groups, where only admins can send messages. Whenever a message is removed, you receive a webhook event containing the author's data. This way, your application can identify the responsible party and take the necessary action, such as removing them from the group.
+
+## Attributes
+
+<InstanceId />
+<Token />
+
+### Headers
+
+| Header | Value |
+| :--- | :--- |
+| `Client-Token` | Account security token |
+| `Content-Type` | `application/json` |
+
+### Request Body
+
+```json
+{
+    "value": true
+}
+```
+
+<ParamField body="value" type="boolean" required>
+  Value that toggles the protection, TRUE enables and FALSE disables (Default = FALSE)
+</ParamField>
+
+## Response
+
+### 200
+<ParamField body="value" type="boolean">
+  Returned with the status provided in the request (TRUE or FALSE)
+</ParamField>
