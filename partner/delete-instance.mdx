@@ -1,0 +1,104 @@
+---
+title: "Deletando uma instância"
+api: "DELETE /instances/{instanceId}/token/{token}/integrator/on-demand/delete"
+description: "Deleta uma instância vinculada à sua conta de parceiro integrador"
+---
+import InstanceId from '/snippets/pt/params/instance-id.mdx'
+import Token from '/snippets/pt/params/token.mdx'
+
+## Conceituação
+
+Método utilizado para deletar uma instância vinculada à sua conta. Para deletar várias de uma vez, use [Deletando instâncias em lote](/partner/delete-instances).
+
+<Warning>
+Para utilizar os endpoints de Partner, informe o Token de Parceiro no campo **Authorization**, no formato: `Bearer <Partner-Token>`
+
+Não é necessário enviar o **Client-Token** nessas requisições.
+</Warning>
+
+<Warning>
+A exclusão é definitiva e não pode ser desfeita.
+</Warning>
+
+---
+
+## Regras de elegibilidade
+
+Uma instância só é deletada quando atende a **todas** as condições abaixo:
+
+- Está **desconectada** do WhatsApp e do celular.
+- Está com a assinatura **cancelada**. Instâncias pagas, pendentes, com boleto pendente, em processo de cancelamento ou em retentativa de pagamento não são elegíveis.
+- Não está em **trial**. Um trial precisa expirar naturalmente ou ser cancelado antes.
+- Já passou da **carência de 40 dias** contados da data de cancelamento da assinatura.
+
+---
+
+## Atributos
+
+### Header
+
+<ParamField header="Authorization" type="string" required>
+  Token de parceiro no formato `Bearer <Partner-Token>`
+</ParamField>
+
+### Path
+
+<InstanceId />
+<Token />
+
+---
+
+## Response
+
+### 204
+
+A instância foi deletada. A resposta não tem corpo.
+
+### 400
+
+A instância não atende às regras de elegibilidade. O campo `message` informa o motivo.
+
+```json
+{
+  "message": "Cannot delete instance because it is still in the grace period of 40 days after cancellation"
+}
+```
+
+Mensagens possíveis:
+
+| Mensagem | Quando acontece |
+| --- | --- |
+| `Cannot delete instance because it is still connected to WhatsApp or phone` | A instância ainda está conectada. |
+| `Cannot delete a trial instance. Trials must expire naturally or be canceled first` | A instância está em trial. |
+| `Cannot delete instance because it is still active` | A assinatura ainda está ativa. |
+| `Cannot delete instance because payment status is not canceled` | A assinatura não está cancelada. |
+| `Cannot delete instance because it is still in the grace period of 40 days after cancellation` | A instância foi cancelada há menos de 40 dias. |
+| `Cannot delete instance because payment status is unknown` | Não foi possível determinar o status de pagamento. |
+
+### 401
+
+O header **Authorization** não foi enviado ou o Token de Parceiro é inválido.
+
+```json
+{
+  "message": "Authorization token is empty"
+}
+```
+
+### 404
+
+Não existe instância para o par `instanceId` e `token` informado.
+
+```json
+{
+  "message": "Instance not found"
+}
+```
+
+### 405
+
+Neste caso certifique que esteja enviando corretamente a especificação do método, ou seja verifique se você enviou o DELETE conforme especificado no início deste tópico.
+
+### 415
+
+Caso você receba um erro 415, certifique de adicionar na headers da requisição o "Content-Type" do objeto que você está enviando, em sua grande maioria "application/json".
