@@ -1,0 +1,60 @@
+---
+title: "Deleting instances"
+api: "POST /instances/integrator/on-demand/batch-delete"
+description: "Deletes one or more instances linked to your integrator partner account"
+---
+
+## Overview
+
+Method used to delete one or more instances linked to your account.
+
+<Warning>
+To use Partner endpoints, provide the Partner Token in the **Authorization** field using the following format: `Bearer <Partner-Token>`
+
+It is not necessary to send the **Client-Token** in these requests.
+</Warning>
+
+<Info>
+You can delete more than one instance in a single request — simply send an array of objects in the request body, with the `id` and `token` fields for each instance to be deleted.
+</Info>
+
+<Warning>
+You can only delete instances with a **PENDING** or **CANCELED** status that are also **DISCONNECTED**.
+</Warning>
+
+## Attributes
+
+### Required
+
+<ParamField body="id" type="string" required>
+  Id of the instance to be deleted
+</ParamField>
+
+<ParamField body="token" type="string" required>
+  Token of the instance to be deleted
+</ParamField>
+
+---
+
+## Request Body
+
+```json
+{
+    "instances": [
+      {
+        "id": "instanceId",
+        "token": "instanceToken"
+      }
+    ]
+}
+```
+
+---
+
+### 405
+
+Make sure you are correctly sending the method specification, that is, verify that you sent POST or GET as specified at the beginning of this topic.
+
+### 415
+
+If you receive a 415 error, make sure to add the "Content-Type" header to your request, which in most cases is "application/json".

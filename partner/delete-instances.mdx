@@ -1,0 +1,60 @@
+---
+title: "Deletando instâncias"
+api: "POST /instances/integrator/on-demand/batch-delete"
+description: "Deleta uma ou mais instâncias vinculadas à sua conta de parceiro integrador"
+---
+
+## Conceituação
+
+Método utilizado para deletar uma ou mais instâncias vinculadas a sua conta.
+
+<Warning>
+Para utilizar os endpoints de Partner, informe o Token de Parceiro no campo **Authorization**, no formato: `Bearer <Partner-Token>`
+
+Não é necessário enviar o **Client-Token** nessas requisições.
+</Warning>
+
+<Info>
+É possível deletar mais de uma instância em uma única requisição, basta enviar no corpo da requisição um array de objetos com os campos `id` e `token` de cada instância a ser deletada.
+</Info>
+
+<Warning>
+Só é possível deletar instâncias com status **PENDENTE** ou **CANCELADA** e que estejam **DESCONECTADAS**.
+</Warning>
+
+## Atributos
+
+### Obrigatórios
+
+<ParamField body="id" type="string" required>
+  Id da instância a ser deletada
+</ParamField>
+
+<ParamField body="token" type="string" required>
+  Token da instância a ser deletada
+</ParamField>
+
+---
+
+## Request Body
+
+```json
+{
+    "instances": [
+      {
+        "id": "instanceId",
+        "token": "instanceToken"
+      }
+    ]
+}
+```
+
+---
+
+### 405
+
+Neste caso certifique que esteja enviando corretamente a especificação do método, ou seja verifique se você enviou o POST ou GET conforme especificado no início deste tópico.
+
+### 415
+
+Caso você receba um erro 415, certifique de adicionar na headers da requisição o "Content-Type" do objeto que você está enviando, em sua grande maioria "application/json".
