@@ -1,12 +1,12 @@
 ---
-title: "Deleting instances"
+title: "Deleting instances in bulk"
 api: "POST /instances/integrator/on-demand/batch-delete"
-description: "Deletes one or more instances linked to your integrator partner account"
+description: "Deletes several instances linked to your integrator partner account in a single request"
 ---
 
 ## Overview
 
-Method used to delete one or more instances linked to your account.
+Method used to delete several instances linked to your account in a single request. To delete a single instance, use [Deleting an instance](/en/partner/delete-instance).
 
 <Warning>
 To use Partner endpoints, provide the Partner Token in the **Authorization** field using the following format: `Bearer <Partner-Token>`
@@ -15,23 +15,46 @@ It is not necessary to send the **Client-Token** in these requests.
 </Warning>
 
 <Info>
-You can delete more than one instance in a single request — simply send an array of objects in the request body, with the `id` and `token` fields for each instance to be deleted.
+Send at most **100 instances per request**. For larger volumes, split the operation into several calls.
 </Info>
 
-<Warning>
-You can only delete instances with a **PENDING** or **CANCELED** status that are also **DISCONNECTED**.
-</Warning>
+<Info>
+Each instance in the list is evaluated individually. A rejected instance does not prevent the others from being deleted: the response reports the outcome of each one.
+</Info>
+
+---
+
+## Eligibility rules
+
+An instance is only deleted when it meets **all** of the conditions below:
+
+- It is **disconnected** from WhatsApp and from the phone.
+- Its subscription is **canceled**. Paid instances, pending ones, ones with a pending bank slip, ones in the cancellation process, or ones in payment retry are not eligible.
+- It is not in **trial**. A trial must expire naturally or be canceled first.
+- The **40-day grace period** counted from the subscription cancellation date has already passed.
+
+---
 
 ## Attributes
 
-### Required
+### Header
 
-<ParamField body="id" type="string" required>
-  Id of the instance to be deleted
+<ParamField header="Authorization" type="string" required>
+  Partner token in the `Bearer <Partner-Token>` format
 </ParamField>
 
-<ParamField body="token" type="string" required>
-  Token of the instance to be deleted
+### Required
+
+<ParamField body="instances" type="array" required>
+  List of instances to be deleted. Maximum of 100 per request.
+  <Expandable title="Properties">
+    <ParamField body="id" type="string" required>
+      Id of the instance to be deleted
+    </ParamField>
+    <ParamField body="token" type="string" required>
+      Token of the instance to be deleted
+    </ParamField>
+  </Expandable>
 </ParamField>
 
 ---
@@ -40,20 +63,89 @@ You can only delete instances with a **PENDING** or **CANCELED** status that are
 
 ```json
 {
-    "instances": [
-      {
-        "id": "instanceId",
-        "token": "instanceToken"
-      }
-    ]
+  "instances": [
+    {
+      "id": "instanceId",
+      "token": "instanceToken"
+    }
+  ]
 }
 ```
 
 ---
 
+## Response
+
+### 200
+
+The `results` field has one entry per instance sent, in the same order as the request.
+
+```json
+{
+  "total": 3,
+  "deleted": 1,
+  "rejected": 2,
+  "results": [
+    {
+      "id": "3C7A1B2C3D4E5F6A",
+      "status": "deleted",
+      "type": null,
+      "reason": null
+    },
+    {
+      "id": "3C7B2C3D4E5F6A7B",
+      "status": "rejected",
+      "type": "INSTANCE_IN_GRACE_PERIOD",
+      "reason": "Cannot delete instance because it is still in the grace period of 40 days after cancellation"
+    },
+    {
+      "id": "3C7C3D4E5F6A7B8C",
+      "status": "rejected",
+      "type": "INSTANCE_NOT_FOUND",
+      "reason": "Instance not found"
+    }
+  ]
+}
+```
+
+### Rejection reasons
+
+Each rejected item has a `type` that identifies the rule that blocked the deletion.
+
+| type | When it happens |
+| --- | --- |
+| `INSTANCE_STILL_CONNECTED` | The instance is still connected to WhatsApp or to the phone. |
+| `INSTANCE_IS_TRIAL` | The instance is in trial. The trial must expire or be canceled first. |
+| `INSTANCE_NOT_ELIGIBLE` | The subscription is still active or is not canceled. |
+| `INSTANCE_IN_GRACE_PERIOD` | The instance was canceled less than 40 days ago. |
+| `INSTANCE_PAYMENT_STATUS_MISSING` | The payment status of the instance could not be determined. |
+| `INSTANCE_NOT_FOUND` | No instance exists for the given `id` and `token` pair. |
+| `INTEGRATION_ERROR` | Failure while communicating with the payment provider. |
+| `INTERNAL_ERROR` | Unexpected failure while deleting the instance. |
+
+### 400
+
+The instance list was empty or above the limit of 100 per request.
+
+```json
+{
+  "message": "Maximum of 100 instances per batch"
+}
+```
+
+### 401
+
+The **Authorization** header was not sent or the Partner Token is invalid.
+
+```json
+{
+  "message": "Authorization token is empty"
+}
+```
+
 ### 405
 
-Make sure you are correctly sending the method specification, that is, verify that you sent POST or GET as specified at the beginning of this topic.
+Make sure you are correctly sending the method specification, that is, verify that you sent POST as specified at the beginning of this topic.
 
 ### 415
 
