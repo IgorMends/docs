@@ -1,0 +1,104 @@
+---
+title: "Deleting an instance"
+api: "DELETE /instances/{instanceId}/token/{token}/integrator/on-demand/delete"
+description: "Deletes an instance linked to your integrator partner account"
+---
+import InstanceId from '/snippets/en/params/instance-id.mdx'
+import Token from '/snippets/en/params/token.mdx'
+
+## Overview
+
+Method used to delete an instance linked to your account. To delete several at once, use [Deleting instances in bulk](/en/partner/delete-instances).
+
+<Warning>
+To use Partner endpoints, provide the Partner Token in the **Authorization** field using the following format: `Bearer <Partner-Token>`
+
+It is not necessary to send the **Client-Token** in these requests.
+</Warning>
+
+<Warning>
+Deletion is permanent and cannot be undone.
+</Warning>
+
+---
+
+## Eligibility rules
+
+An instance is only deleted when it meets **all** of the conditions below:
+
+- It is **disconnected** from WhatsApp and from the phone.
+- Its subscription is **canceled**. Paid instances, pending ones, ones with a pending bank slip, ones in the cancellation process, or ones in payment retry are not eligible.
+- It is not in **trial**. A trial must expire naturally or be canceled first.
+- The **40-day grace period** counted from the subscription cancellation date has already passed.
+
+---
+
+## Attributes
+
+### Header
+
+<ParamField header="Authorization" type="string" required>
+  Partner token in the `Bearer <Partner-Token>` format
+</ParamField>
+
+### Path
+
+<InstanceId />
+<Token />
+
+---
+
+## Response
+
+### 204
+
+The instance was deleted. The response has no body.
+
+### 400
+
+The instance does not meet the eligibility rules. The `message` field states the reason.
+
+```json
+{
+  "message": "Cannot delete instance because it is still in the grace period of 40 days after cancellation"
+}
+```
+
+Possible messages:
+
+| Message | When it happens |
+| --- | --- |
+| `Cannot delete instance because it is still connected to WhatsApp or phone` | The instance is still connected. |
+| `Cannot delete a trial instance. Trials must expire naturally or be canceled first` | The instance is in trial. |
+| `Cannot delete instance because it is still active` | The subscription is still active. |
+| `Cannot delete instance because payment status is not canceled` | The subscription is not canceled. |
+| `Cannot delete instance because it is still in the grace period of 40 days after cancellation` | The instance was canceled less than 40 days ago. |
+| `Cannot delete instance because payment status is unknown` | The payment status could not be determined. |
+
+### 401
+
+The **Authorization** header was not sent or the Partner Token is invalid.
+
+```json
+{
+  "message": "Authorization token is empty"
+}
+```
+
+### 404
+
+No instance exists for the given `instanceId` and `token` pair.
+
+```json
+{
+  "message": "Instance not found"
+}
+```
+
+### 405
+
+Make sure you are correctly sending the method specification, that is, verify that you sent DELETE as specified at the beginning of this topic.
+
+### 415
+
+If you receive a 415 error, make sure to add the "Content-Type" header to your request, which in most cases is "application/json".

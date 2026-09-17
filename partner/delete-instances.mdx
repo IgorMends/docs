@@ -1,12 +1,12 @@
 ---
-title: "Deletando instâncias"
+title: "Deletando instâncias em lote"
 api: "POST /instances/integrator/on-demand/batch-delete"
-description: "Deleta uma ou mais instâncias vinculadas à sua conta de parceiro integrador"
+description: "Deleta várias instâncias vinculadas à sua conta de parceiro integrador em uma única requisição"
 ---
 
 ## Conceituação
 
-Método utilizado para deletar uma ou mais instâncias vinculadas a sua conta.
+Método utilizado para deletar várias instâncias vinculadas à sua conta em uma única requisição. Para deletar apenas uma instância, use [Deletando uma instância](/partner/delete-instance).
 
 <Warning>
 Para utilizar os endpoints de Partner, informe o Token de Parceiro no campo **Authorization**, no formato: `Bearer <Partner-Token>`
@@ -15,23 +15,46 @@ Não é necessário enviar o **Client-Token** nessas requisições.
 </Warning>
 
 <Info>
-É possível deletar mais de uma instância em uma única requisição, basta enviar no corpo da requisição um array de objetos com os campos `id` e `token` de cada instância a ser deletada.
+Envie no máximo **100 instâncias por requisição**. Para volumes maiores, divida a operação em várias chamadas.
 </Info>
 
-<Warning>
-Só é possível deletar instâncias com status **PENDENTE** ou **CANCELADA** e que estejam **DESCONECTADAS**.
-</Warning>
+<Info>
+Cada instância da lista é avaliada individualmente. Uma instância recusada não impede que as demais sejam deletadas: a resposta informa o resultado de cada uma.
+</Info>
+
+---
+
+## Regras de elegibilidade
+
+Uma instância só é deletada quando atende a **todas** as condições abaixo:
+
+- Está **desconectada** do WhatsApp e do celular.
+- Está com a assinatura **cancelada**. Instâncias pagas, pendentes, com boleto pendente, em processo de cancelamento ou em retentativa de pagamento não são elegíveis.
+- Não está em **trial**. Um trial precisa expirar naturalmente ou ser cancelado antes.
+- Já passou da **carência de 40 dias** contados da data de cancelamento da assinatura.
+
+---
 
 ## Atributos
 
-### Obrigatórios
+### Header
 
-<ParamField body="id" type="string" required>
-  Id da instância a ser deletada
+<ParamField header="Authorization" type="string" required>
+  Token de parceiro no formato `Bearer <Partner-Token>`
 </ParamField>
 
-<ParamField body="token" type="string" required>
-  Token da instância a ser deletada
+### Obrigatórios
+
+<ParamField body="instances" type="array" required>
+  Lista das instâncias a serem deletadas. Máximo de 100 por requisição.
+  <Expandable title="Propriedades">
+    <ParamField body="id" type="string" required>
+      Id da instância a ser deletada
+    </ParamField>
+    <ParamField body="token" type="string" required>
+      Token da instância a ser deletada
+    </ParamField>
+  </Expandable>
 </ParamField>
 
 ---
@@ -40,20 +63,89 @@ Só é possível deletar instâncias com status **PENDENTE** ou **CANCELADA** e 
 
 ```json
 {
-    "instances": [
-      {
-        "id": "instanceId",
-        "token": "instanceToken"
-      }
-    ]
+  "instances": [
+    {
+      "id": "instanceId",
+      "token": "instanceToken"
+    }
+  ]
 }
 ```
 
 ---
 
+## Response
+
+### 200
+
+O campo `results` traz uma entrada por instância enviada, na mesma ordem da requisição.
+
+```json
+{
+  "total": 3,
+  "deleted": 1,
+  "rejected": 2,
+  "results": [
+    {
+      "id": "3C7A1B2C3D4E5F6A",
+      "status": "deleted",
+      "type": null,
+      "reason": null
+    },
+    {
+      "id": "3C7B2C3D4E5F6A7B",
+      "status": "rejected",
+      "type": "INSTANCE_IN_GRACE_PERIOD",
+      "reason": "Cannot delete instance because it is still in the grace period of 40 days after cancellation"
+    },
+    {
+      "id": "3C7C3D4E5F6A7B8C",
+      "status": "rejected",
+      "type": "INSTANCE_NOT_FOUND",
+      "reason": "Instance not found"
+    }
+  ]
+}
+```
+
+### Motivos de recusa
+
+Cada item recusado traz um `type` que identifica a regra que bloqueou a exclusão.
+
+| type | Quando acontece |
+| --- | --- |
+| `INSTANCE_STILL_CONNECTED` | A instância ainda está conectada ao WhatsApp ou ao celular. |
+| `INSTANCE_IS_TRIAL` | A instância está em trial. O trial precisa expirar ou ser cancelado antes. |
+| `INSTANCE_NOT_ELIGIBLE` | A assinatura ainda está ativa ou não está cancelada. |
+| `INSTANCE_IN_GRACE_PERIOD` | A instância foi cancelada há menos de 40 dias. |
+| `INSTANCE_PAYMENT_STATUS_MISSING` | Não foi possível determinar o status de pagamento da instância. |
+| `INSTANCE_NOT_FOUND` | Não existe instância para o par `id` e `token` informado. |
+| `INTEGRATION_ERROR` | Falha ao comunicar com o provedor de pagamento. |
+| `INTERNAL_ERROR` | Falha inesperada ao deletar a instância. |
+
+### 400
+
+A lista de instâncias veio vazia ou acima do limite de 100 por requisição.
+
+```json
+{
+  "message": "Maximum of 100 instances per batch"
+}
+```
+
+### 401
+
+O header **Authorization** não foi enviado ou o Token de Parceiro é inválido.
+
+```json
+{
+  "message": "Authorization token is empty"
+}
+```
+
 ### 405
 
-Neste caso certifique que esteja enviando corretamente a especificação do método, ou seja verifique se você enviou o POST ou GET conforme especificado no início deste tópico.
+Neste caso certifique que esteja enviando corretamente a especificação do método, ou seja verifique se você enviou o POST conforme especificado no início deste tópico.
 
 ### 415
 
